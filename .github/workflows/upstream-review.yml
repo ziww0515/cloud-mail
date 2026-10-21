@@ -1,4 +1,4 @@
-name: Upstream review PR
+name: Upstream stable release review
 
 on:
   schedule:
@@ -9,38 +9,20 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: upstream-stable-review
+  cancel-in-progress: false
+
 jobs:
   review-upstream:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: main
-      - name: Fetch upstream stable release
-        run: |
-          git remote add upstream https://github.com/maillab/cloud-mail.git
-          git fetch upstream --tags --prune
-          git fetch origin main --prune
-      - name: Build stable review branch
-        run: |
-          set -euo pipefail
-          tag=v3.3.0
-          branch="automation/upstream-review-${tag#v}"
-          git fetch origin "$branch" || true
-          if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then git switch -C "$branch" "origin/$branch"; else git switch -c "$branch" main; fi
-          if ! git merge --no-commit --no-ff --allow-unrelated-histories "upstream/$tag"; then
-            git add -A
-            git commit -m "chore: upstream ${tag} review (manual conflicts required)" || true
-          else
-            git add -A
-            git commit -m "chore: review upstream ${tag}" || true
-          fi
-          git push --force-with-lease origin "$branch"
-      - name: Open or update draft review PR
+      - name: Discover latest stable and open a draft review PR
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          branch=automation/upstream-review-v3.3.0
-          existing=$(gh pr list --base main --head "$branch" --state open --json number --jq '.[0].number')
-          if [ -z "$existing" ]; then gh pr create --draft --base main --head "$branch" --title "chore: review upstream stable release" --body 'Draft only; human review and explicit conflict resolution required. Never deploys automatically.'; else echo "Updated draft PR #$existing"; fi
+        run: bash .github/scripts/upstream-review.sh
