@@ -1,0 +1,46 @@
+name: Upstream review PR
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  review-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/maillab/cloud-mail.git
+          git fetch upstream main --prune
+      - name: Require a safe merge base
+        run: |
+          if ! git merge-base main upstream/main >/tmp/merge-base; then
+            echo 'Upstream and local histories have no common ancestor; refusing an automatic tree replacement.'
+            exit 1
+          fi
+      - name: Open review branch and PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="automation/upstream-review-$(date -u +%Y%m%d)"
+          git switch -c "$branch"
+          git merge --no-commit --no-ff upstream/main
+          if git diff --quiet; then
+            echo 'No upstream changes.'
+            exit 0
+          fi
+          git add -A
+          git commit -m "chore: review upstream changes"
+          git push --force-with-lease origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore: review upstream changes" \
+            --body 'Automated upstream diff for human review. This workflow never deploys; inspect Worker, D1, KV, CSP/WAF/DNS and local customizations before merging.' || true
