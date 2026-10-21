@@ -52,7 +52,7 @@ describe('portal OTP log contract', () => {
   it('accepts successful portal content metadata while keeping failure callbacks status-only', () => {
     const contentPayload = { ...payload, subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', targetHost: 'my.example.test' };
     expect(validatePortalOtpLogPayload(contentPayload)).toMatchObject({ subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', targetHost: 'my.example.test' });
-    expect(validatePortalOtpLogPayload({ ...payload, status: 'failed', ...contentPayload })).toBeNull();
+		expect(validatePortalOtpLogPayload({ ...contentPayload, status: 'failed' })).toBeNull();
   });
 
   it('uses one atomic INSERT SELECT and redacts sensitive values', async () => {

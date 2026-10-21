@@ -1,0 +1,28 @@
+name = "test-mail-isolated"
+main = "src/index.js"
+compatibility_date = "2025-06-04"
+workers_dev = true
+
+[vars]
+EXTERNAL_AI_WORKER = ""
+AI_MODEL = ""
+ANALYSIS_CACHE = "false"
+ORM_LOG = "false"
+
+[[d1_databases]]
+binding = "db"
+database_name = "test-mail-local"
+database_id = "test-mail-local"
+
+[[kv_namespaces]]
+binding = "kv"
+id = "test-mail-local"
+
+[[r2_buckets]]
+binding = "r2"
+bucket_name = "test-mail-local"
+
+[assets]
+binding = "assets"
+directory = "./dist"
+not_found_handling = "single-page-application"

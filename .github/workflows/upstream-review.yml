@@ -17,30 +17,30 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-      - name: Fetch upstream
+      - name: Fetch upstream stable release
         run: |
           git remote add upstream https://github.com/maillab/cloud-mail.git
-          git fetch upstream main --prune
-      - name: Require a safe merge base
+          git fetch upstream --tags --prune
+          git fetch origin main --prune
+      - name: Build stable review branch
         run: |
-          if ! git merge-base main upstream/main >/tmp/merge-base; then
-            echo 'Upstream and local histories have no common ancestor; refusing an automatic tree replacement.'
-            exit 1
+          set -euo pipefail
+          tag=v3.3.0
+          branch="automation/upstream-review-${tag#v}"
+          git fetch origin "$branch" || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then git switch -C "$branch" "origin/$branch"; else git switch -c "$branch" main; fi
+          if ! git merge --no-commit --no-ff --allow-unrelated-histories "upstream/$tag"; then
+            git add -A
+            git commit -m "chore: upstream ${tag} review (manual conflicts required)" || true
+          else
+            git add -A
+            git commit -m "chore: review upstream ${tag}" || true
           fi
-      - name: Open review branch and PR
+          git push --force-with-lease origin "$branch"
+      - name: Open or update draft review PR
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          branch="automation/upstream-review-$(date -u +%Y%m%d)"
-          git switch -c "$branch"
-          git merge --no-commit --no-ff upstream/main
-          if git diff --quiet; then
-            echo 'No upstream changes.'
-            exit 0
-          fi
-          git add -A
-          git commit -m "chore: review upstream changes"
-          git push --force-with-lease origin "$branch"
-          gh pr create --base main --head "$branch" \
-            --title "chore: review upstream changes" \
-            --body 'Automated upstream diff for human review. This workflow never deploys; inspect Worker, D1, KV, CSP/WAF/DNS and local customizations before merging.' || true
+          branch=automation/upstream-review-v3.3.0
+          existing=$(gh pr list --base main --head "$branch" --state open --json number --jq '.[0].number')
+          if [ -z "$existing" ]; then gh pr create --draft --base main --head "$branch" --title "chore: review upstream stable release" --body 'Draft only; human review and explicit conflict resolution required. Never deploys automatically.'; else echo "Updated draft PR #$existing"; fi
