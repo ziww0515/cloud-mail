@@ -13,3 +13,11 @@
 ## 无副作用检查
 
 在干净仓库执行 `UPSTREAM_REVIEW_DRY_RUN=1 bash .github/scripts/upstream-review.sh`，只读取远端并更新本地 Git fetch 引用，不提交、推送、创建 PR 或部署。Worker 单测使用 `mail-worker/wrangler-vitest.toml` 的隔离资源；`mail-worker` 的 `pnpm test` 是真正的 `vitest run`，不是部署命令。
+
+## 本次生产迁移约束
+
+3.3.0 不能只更新静态页面。现有 v3.0 D1 需增添 setting 新字段、oauth.platform 和邮件列表索引。上线前先备份现有 cloudmail，并通过 PRAGMA table_info / index_list 比对，逐项只执行缺少的新增字段和索引；不要无差别重跑包含旧迁移的 /api/init/:secret，也不要把 JWT secret 放入 URL 或运行日志。sync_delete 默认 1（关闭），auto_clean_days 默认 0（关闭），新增第三方登录和 Webhook 默认 1（关闭）。已有邮件、账号、配置和绑定不删除、不重建。
+
+私有 Sent 正文保留完整验证码、登录域名和可信来源 IP；收件地址从运行时 owner 配置读取，不在公开源代码或前端资产中硬编码。旧的已脱敏历史记录没有可逆信息，不能凭空恢复。验收需在现有 Worker 更新后实发 my/cn 各一封，并通过 owner-only Sent 验证原文；本地测试通过不等于生产邮件已验收。
+
+现有部署 workflow 已改为仅手动触发，必须明确确认旧库已备份并完成审查迁移。缺少现有 D1/KV 的精确 ID 即失败，删除了自动创建数据库/KV、自动初始化旧库和删除 workflow 运行记录的步骤。上游审查 workflow 本身没有部署步骤。

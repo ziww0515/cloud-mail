@@ -60,6 +60,10 @@ const dbInit = {
 	},
 
 	async v3_2DB(c) {
+            // Existing v3.0 OAuth tables lack the field present in the new entity.
+            try { await c.env.db.prepare(`ALTER TABLE oauth ADD COLUMN platform TEXT;`).run(); }
+            catch (e) { if (!String(e.message).includes('duplicate column')) throw e; }
+
 		try {
 			await c.env.db.batch([
 				await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN linuxdo_client_id TEXT NOT NULL DEFAULT '';`),
@@ -105,12 +109,12 @@ const dbInit = {
 		}
 	},
 
-	async v3_1DB(c) {
-		try {
-			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN sync_delete INTEGER NOT NULL DEFAULT 0;`).run();
-		} catch (e) {
-			console.warn(`跳过字段：${e.message}`);
-		}
+		async v3_1DB(c) {
+			try {
+				await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN sync_delete INTEGER NOT NULL DEFAULT 1;`).run();
+			} catch (e) {
+				console.warn(`跳过字段：${e.message}`);
+			}
 	},
 
 
