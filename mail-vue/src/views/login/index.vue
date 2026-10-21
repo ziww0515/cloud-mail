@@ -412,7 +412,6 @@ async function saveToken(token) {
     router.addRoute('layout', routerData);
   });
   await router.replace({name: 'layout'})
-  uiStore.showNotice()
   oauthLoading.value = false;
   bindLoading.value = false;
 }

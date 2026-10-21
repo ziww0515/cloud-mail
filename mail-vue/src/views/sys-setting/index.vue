@@ -966,7 +966,7 @@ function getSettings() {
 
 
 function openNoticePopup() {
-  uiStore.showNotice()
+  // Announcements are intentionally disabled in the client.
 }
 
 function openAddVerifyCount() {

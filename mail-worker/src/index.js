@@ -6,12 +6,16 @@ import emailService from './service/email-service';
 import kvObjService from './service/kv-obj-service';
 import oauthService from "./service/oauth-service";
 import analysisService from './service/analysis-service';
+import { handlePortalOtpLog, PATH as PORTAL_OTP_LOG_PATH } from './service/portal-otp-log-service';
 export default {
 	 async fetch(req, env, ctx) {
 
-		const url = new URL(req.url)
+			const url = new URL(req.url)
+			if (url.pathname === PORTAL_OTP_LOG_PATH) {
+				return handlePortalOtpLog(req, env);
+			}
 
-		if (url.pathname.startsWith('/api/')) {
+			if (url.pathname.startsWith('/api/')) {
 			url.pathname = url.pathname.replace('/api', '')
 			req = new Request(url.toString(), req)
 			return app.fetch(req, env, ctx);

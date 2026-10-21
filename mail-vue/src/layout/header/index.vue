@@ -16,9 +16,6 @@
       <div v-else class="dark-icon icon-item" @click="openDark($event)">
         <Icon icon="solar:moon-linear"/>
       </div>
-      <div class="notice icon-item" @click="openNotice">
-        <Icon icon="streamline-plump:announcement-megaphone"/>
-      </div>
       <el-dropdown ref="userinfoRef" @visible-change="e => userInfoShow = e" :teleported="false" popper-class="detail-dropdown">
         <div class="avatar" @click="userInfoHide" >
           <div class="avatar-text">
@@ -185,10 +182,6 @@ async function copyEmail(email) {
 function changeLang(lang) {
   setExtend(lang === 'en' ? 'en' : 'zh-cn')
   settingStore.lang = lang
-}
-
-function openNotice() {
-  uiStore.showNotice()
 }
 
 function openDark(e) {
