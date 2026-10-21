@@ -22,13 +22,28 @@ function hexToBytes(value) {
 
 export function validatePortalOtpLogPayload(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+  const baseKeys = ['challenge', 'providerId', 'sentAt', 'status'];
+  const contentKeys = ['loginIp', 'subject', 'targetHost', 'text'];
   const keys = Object.keys(payload).sort();
-  if (keys.join(',') !== 'challenge,providerId,sentAt,status') return null;
+  const allowed = [...baseKeys, ...contentKeys].sort();
+  if (!keys.every(key => allowed.includes(key))) return null;
+  if (!baseKeys.every(key => keys.includes(key))) return null;
   if (!(payload.providerId === null || (typeof payload.providerId === 'string' && payload.providerId.length <= 200))) return null;
   if (typeof payload.challenge !== 'string' || !/^[0-9a-f]{64}$/i.test(payload.challenge)) return null;
   if (payload.status !== 'accepted' && payload.status !== 'failed') return null;
   if (typeof payload.sentAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(payload.sentAt) || !Number.isFinite(Date.parse(payload.sentAt))) return null;
-  return { providerId: payload.providerId, challenge: payload.challenge.toLowerCase(), status: payload.status, sentAt: payload.sentAt };
+  // The portal sends message contents only for a successful delivery. Keep the
+  // legacy status-only contract for failures and never persist an OTP in logs.
+  const hasContent = contentKeys.every(key => typeof payload[key] === 'string' && payload[key].length > 0);
+  if (keys.some(key => contentKeys.includes(key)) && (payload.status !== 'accepted' || !hasContent)) return null;
+  if (hasContent && (payload.subject.length > 500 || payload.text.length > 10000 || payload.loginIp.length > 100 || payload.targetHost.length > 253)) return null;
+  return {
+    providerId: payload.providerId,
+    challenge: payload.challenge.toLowerCase(),
+    status: payload.status,
+    sentAt: payload.sentAt,
+    ...(hasContent ? { subject: payload.subject, text: payload.text, loginIp: payload.loginIp, targetHost: payload.targetHost } : {})
+  };
 }
 
 async function readBodyUnderLimit(request) {
@@ -87,7 +102,9 @@ export async function persistPortalOtpLog(c, payload, database = orm(c)) {
   const status = payload.status === 'accepted' ? emailConst.status.SENT : emailConst.status.FAILED;
   const db = c.env.db;
   if (!db?.prepare) throw new Error('database binding unavailable');
-  const values = [SENDER, 'service', adminAccount.accountId, adminUser.userId, SUBJECT, REDACTED_CONTENT, REDACTED_CONTENT, JSON.stringify([{ address: RECIPIENT, name: '' }]), RECIPIENT, payload.challenge, emailConst.type.SEND, status, payload.providerId, payload.sentAt, adminUser.userId, payload.challenge, emailConst.type.SEND];
+  const subject = payload.subject || SUBJECT;
+  const text = payload.text || REDACTED_CONTENT;
+  const values = [SENDER, 'service', adminAccount.accountId, adminUser.userId, subject, text, text, JSON.stringify([{ address: RECIPIENT, name: '' }]), RECIPIENT, payload.challenge, emailConst.type.SEND, status, payload.providerId, payload.sentAt, adminUser.userId, payload.challenge, emailConst.type.SEND];
   await db.prepare(INSERT_IF_ABSENT).bind(...values).run();
   const found = await db.prepare('SELECT email_id, status FROM email WHERE user_id = ? AND message_id = ? AND type = ? LIMIT 1').bind(adminUser.userId, payload.challenge, emailConst.type.SEND).first();
   if (!found) throw new Error('otp log write failed');

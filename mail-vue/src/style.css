@@ -210,3 +210,23 @@ html[data-theme-to="light"]::view-transition-old(root) {
     from { clip-path: circle(var(--vt-end-radius, 0px) at var(--vt-x) var(--vt-y)); }
     to   { clip-path: circle(0px at var(--vt-x) var(--vt-y)); }
 }
+/* Ziww SPACE visual language: deep-sea glass surfaces, quiet borders, readable type. */
+:root {
+  --cloud-space-bg: #122b3e;
+  --cloud-space-surface: rgba(9, 28, 43, .92);
+  --cloud-space-line: rgba(214, 232, 242, .18);
+  --cloud-space-accent: #c4efdf;
+}
+body {
+  background: var(--cloud-space-bg);
+}
+.header, .aside, .main-container, .el-card, .settings-card, .account-card {
+  border-color: var(--cloud-space-line);
+}
+.header, .aside, .el-card, .settings-card, .account-card, .email-list, .email-content {
+  background: var(--cloud-space-surface);
+  backdrop-filter: blur(18px);
+}
+.header { box-shadow: 0 12px 30px rgba(0, 21, 37, .16); }
+.toolbar .icon-item:hover, .header-btn:hover, .writer-box:hover { color: var(--cloud-space-accent); }
+.notice { display: none !important; }
