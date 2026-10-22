@@ -68,7 +68,7 @@ describe('portal OTP log contract', () => {
 
   it('writes full accepted login details and runtime owner recipient to private Sent', async () => {
     const db = d1Mock({ email_id: 99, status: 8 });
-    const message = { ...payload, subject: 'Ziww login · cn.ziww.cc.cd', text: 'TEST CODE 000000; IP 203.0.113.7; cn.ziww.cc.cd', loginIp: '203.0.113.7', targetHost: 'cn.ziww.cc.cd' };
+    const message = { ...payload, subject: 'Ziww 登录验证码 · 大陆站', text: 'TEST CODE 000000; IP 203.0.113.7; location Hong Kong/Shanghai; 大陆站', loginIp: '203.0.113.7', loginLocation: 'Hong Kong/Shanghai', targetHost: 'cn.ziww.cc.cd' };
     await persistPortalOtpLog({ env: { admin: 'admin@example.com', db } }, message, ormMock());
     const inserted = db.calls.find(c => c.sql.startsWith('INSERT'));
     expect(inserted.args).toContain(message.text);

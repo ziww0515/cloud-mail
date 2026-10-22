@@ -22,7 +22,8 @@ function hexToBytes(value) {
 export function validatePortalOtpLogPayload(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
   const baseKeys = ['challenge', 'providerId', 'sentAt', 'status'];
-  const contentKeys = ['loginIp', 'subject', 'targetHost', 'text'];
+  const contentKeys = ['loginIp', 'loginLocation', 'subject', 'targetHost', 'text'];
+  const legacyContentKeys = ['loginIp', 'subject', 'targetHost', 'text'];
   const keys = Object.keys(payload).sort();
   const allowed = [...baseKeys, ...contentKeys].sort();
   if (!keys.every(key => allowed.includes(key))) return null;
@@ -33,15 +34,16 @@ export function validatePortalOtpLogPayload(payload) {
   if (typeof payload.sentAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(payload.sentAt) || !Number.isFinite(Date.parse(payload.sentAt))) return null;
   // The portal sends message contents only for a successful delivery. Keep the
   // legacy status-only contract for failures and never persist an OTP in logs.
-  const hasContent = contentKeys.every(key => typeof payload[key] === 'string' && payload[key].length > 0);
+  const hasContent = legacyContentKeys.every(key => typeof payload[key] === 'string' && payload[key].length > 0);
   if (keys.some(key => contentKeys.includes(key)) && (payload.status !== 'accepted' || !hasContent)) return null;
-  if (hasContent && (payload.subject.length > 500 || payload.text.length > 10000 || payload.loginIp.length > 100 || payload.targetHost.length > 253)) return null;
+  if (hasContent && payload.loginLocation !== undefined && (typeof payload.loginLocation !== 'string' || payload.loginLocation.length === 0)) return null;
+  if (hasContent && (payload.subject.length > 500 || payload.text.length > 10000 || payload.loginIp.length > 100 || (payload.loginLocation && payload.loginLocation.length > 240) || payload.targetHost.length > 253)) return null;
   return {
     providerId: payload.providerId,
     challenge: payload.challenge.toLowerCase(),
     status: payload.status,
     sentAt: payload.sentAt,
-    ...(hasContent ? { subject: payload.subject, text: payload.text, loginIp: payload.loginIp, targetHost: payload.targetHost } : {})
+    ...(hasContent ? { subject: payload.subject, text: payload.text, loginIp: payload.loginIp, ...(payload.loginLocation ? {loginLocation: payload.loginLocation} : {}), targetHost: payload.targetHost } : {})
   };
 }
 
