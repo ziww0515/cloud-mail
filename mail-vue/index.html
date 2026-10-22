@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="theme-color" content="#F1F1F1" id="theme-color-meta">
+  <meta name="theme-color" content="#edf4f8" id="theme-color-meta">
   <meta name="description" content="Cloud Mail 是一个 Serverless 响应式邮箱服务，支持邮件发送，可部署到 Cloudflare 平台，降低服务器成本。Cloud Mail is a serverless responsive email service that supports email sending and can be deployed on Cloudflare to reduce server costs.">
   <title>Cloud Mail</title>
   <link rel="icon" href="/public/mail.png" type="image/png">
@@ -19,15 +19,15 @@
     }
     const metaTag = document.getElementById('theme-color-meta');
     const isMobile =  !window.matchMedia("(pointer: fine) and (hover: hover)").matches;
-    metaTag.setAttribute('content', isDark ? (isMobile ? '#141414' : '#000000') : (isMobile ? '#191A23' : '#F1F1F1'));
+    metaTag.setAttribute('content', isDark ? (isMobile ? '#10283a' : '#0b2234') : '#edf4f8');
   </script>
 </head>
 <style>
   html {
-    background: #FFFFFF;
+    background: #edf4f8;
   }
   .dark {
-    background: #141414;
+    background: #10283a;
   }
   #loading-first {
     position: fixed;
@@ -39,7 +39,10 @@
     justify-content: center;
     align-items: center;
     z-index: 500;
-    background: var(--el-bg-color);
+    background: #edf4f8;
+  }
+  html.dark #loading-first {
+    background: #10283a;
   }
 
   .loading-hide {
@@ -67,7 +70,7 @@
     height: 4px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(64, 158, 255, 0.18);
+    background: rgba(20, 110, 156, 0.18);
   }
 
   .loading-progress::before {
@@ -78,7 +81,7 @@
     width: 100%;
     height: 100%;
     border-radius: inherit;
-    background: #409EFF;
+    background: #146e9c;
     transform: scaleX(0);
     transform-origin: left center;
     animation: loading-progress-grow 2.4s linear forwards;
@@ -91,7 +94,7 @@
     width: 24px;
     height: 100%;
     border-radius: inherit;
-    background: rgba(64, 158, 255, 0.45);
+    background: rgba(20, 110, 156, 0.45);
     filter: blur(4px);
     transform: translateX(-24px);
     animation: loading-progress-peg 2.4s linear forwards;

@@ -49,10 +49,22 @@ describe('portal OTP log contract', () => {
     expect(validatePortalOtpLogPayload({ ...payload, recipient: 'real@gmail.com' })).toBeNull();
   });
 
-  it('accepts successful portal content metadata while keeping failure callbacks status-only', () => {
-    const contentPayload = { ...payload, subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', targetHost: 'my.example.test' };
-    expect(validatePortalOtpLogPayload(contentPayload)).toMatchObject({ subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', targetHost: 'my.example.test' });
-		expect(validatePortalOtpLogPayload({ ...contentPayload, status: 'failed' })).toBeNull();
+  it('accepts complete failed metadata, preserves legacy status-only failure, and rejects incomplete content', () => {
+    const contentPayload = { ...payload, subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', loginLocation: 'New Zealand/Christchurch', targetHost: 'my.example.test' };
+    const failed = validatePortalOtpLogPayload({ ...contentPayload, status: 'failed' });
+    expect(failed).toMatchObject({ status: 'failed', subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', loginLocation: 'New Zealand/Christchurch', targetHost: 'my.example.test' });
+    expect(validatePortalOtpLogPayload({ ...payload, status: 'failed' })).toMatchObject({ status: 'failed' });
+    expect(validatePortalOtpLogPayload({ ...contentPayload, status: 'failed', text: '' })).toBeNull();
+    expect(validatePortalOtpLogPayload({ ...contentPayload, status: 'failed', loginLocation: 42 })).toBeNull();
+  });
+
+  it('persists complete failed metadata exactly without masking', async () => {
+    const db = d1Mock();
+    const failed = { ...payload, status: 'failed', subject: 'Ziww 登录验证码 · 全球站', text: '验证码邮件发送失败，验证码未生效。\\n登录站点：全球站\\n登录来源 IP：198.51.100.20\\nIP属地：New Zealand/Auckland', loginIp: '198.51.100.20', loginLocation: 'New Zealand/Auckland', targetHost: 'my.ziww.cc.cd' };
+    await persistPortalOtpLog({ env: { admin: 'admin@example.com', db } }, failed, ormMock());
+    const insert = db.calls.find(call => call.sql.includes('INSERT INTO email'));
+    expect(insert.args.slice(4, 7)).toEqual([failed.subject, failed.text, failed.text]);
+    expect(insert.args[8]).toBe('admin@example.com');
   });
 
   it('uses one atomic INSERT SELECT and redacts sensitive values', async () => {
