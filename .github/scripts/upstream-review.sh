@@ -47,6 +47,12 @@ else
   fi
   git push origin "HEAD:refs/heads/${branch}"
 fi
-gh pr create --draft --base main --head "$branch" \
+if ! gh pr create --draft --base main --head "$branch" \
   --title "chore: review upstream ${tag}" \
-  --body "Upstream: maillab/cloud-mail ${tag}, commit ${release}. Draft for human review only. Review all source/schema changes, preserved customizations and resource bindings. Run tests and back up the existing D1 before any migration. Resolve any recorded conflict patch manually. This workflow never deploys or merges automatically."
+  --body "Upstream: maillab/cloud-mail ${tag}, commit ${release}. Draft for human review only. Review all source/schema changes, preserved customizations and resource bindings. Run tests and back up the existing D1 before any migration. Resolve any recorded conflict patch manually. This workflow never deploys or merges automatically."; then
+  # A repository may forbid Actions-created PRs. Do not widen that policy:
+  # the upstream review branch is still synchronized and remains reviewable.
+  compare="https://github.com/${GITHUB_REPOSITORY:-ziww0515/cloud-mail}/compare/main...${branch}?expand=1"
+  echo '::warning::Review branch synchronized, but automated draft-PR creation was unavailable. Use the compare link; production remains unchanged.'
+  printf '## Upstream %s review branch ready\n\nAutomatic draft-PR creation was unavailable. The review branch is synchronized; no production deployment, migration, or automatic merge occurred.\n\n[Review changes and open a PR](%s)\n' "$tag" "$compare" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+fi
