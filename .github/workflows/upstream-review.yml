@@ -2,10 +2,11 @@ name: Upstream stable release review
 
 on:
   schedule:
-    # Monday 00:00 Pacific/Auckland is Sunday 11:00 UTC (NZDT)
-    # or Sunday 12:00 UTC (NZST). The guard permits only the matching slot.
-    - cron: '0 11 * * 0'
-    - cron: '0 12 * * 0'
+    # Auckland 00:00 on the first falls on the prior month's last UTC day:
+    # 11:00 UTC in NZDT or 12:00 UTC in NZST. Days 28-31 are candidates;
+    # the guard requires local day 1, midnight, and the matching seasonal slot.
+    - cron: '0 11 28-31 * *'
+    - cron: '0 12 28-31 * *'
   workflow_dispatch:
 
 permissions:
@@ -25,7 +26,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-      - name: Gate scheduled checks to Auckland Monday midnight
+      - name: Gate scheduled checks to Auckland monthly midnight
         id: auckland
         run: python3 .github/scripts/auckland_schedule.py
       - name: Discover latest stable and open a draft review PR
