@@ -23,6 +23,7 @@ import domainUtils from '../utils/domain-uitls';
 import account from "../entity/account";
 import { att } from '../entity/att';
 import telegramService from './telegram-service';
+import { maskPortalOtpList } from '../utils/portal-otp-mask';
 
 const emailService = {
 
@@ -117,9 +118,10 @@ const emailService = {
 			))
 			.orderBy(desc(email.emailId)).limit(1).get();
 
-		let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
+			let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
+			list = maskPortalOtpList(list);
 
-		list = list.map(item => ({
+			list = list.map(item => ({
 			...item,
 			isStar: item.starId != null ? 1 : 0
 		}));
@@ -957,9 +959,10 @@ const emailService = {
 			.where(eq(email.type, emailConst.type.RECEIVE))
 			.orderBy(desc(email.emailId)).limit(1).get();
 
-		let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
+			let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
+			list = maskPortalOtpList(list);
 
-		if (full) {
+			if (full) {
 			await this.emailAddAtt(c, list);
 		} else {
 			this.applyListText(list);
