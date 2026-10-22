@@ -2,7 +2,10 @@ name: Upstream stable release review
 
 on:
   schedule:
-    - cron: '17 3 * * 1'
+    # Monday 00:00 Pacific/Auckland is Sunday 11:00 UTC (NZDT)
+    # or Sunday 12:00 UTC (NZST). The guard permits only the matching slot.
+    - cron: '0 11 * * 0'
+    - cron: '0 12 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +25,11 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
+      - name: Gate scheduled checks to Auckland Monday midnight
+        id: auckland
+        run: python3 .github/scripts/auckland_schedule.py
       - name: Discover latest stable and open a draft review PR
+        if: steps.auckland.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/upstream-review.sh
