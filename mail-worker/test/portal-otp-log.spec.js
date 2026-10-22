@@ -49,6 +49,12 @@ describe('portal OTP log contract', () => {
     expect(validatePortalOtpLogPayload({ ...payload, recipient: 'real@gmail.com' })).toBeNull();
   });
 
+  it('accepts successful portal content metadata while keeping failure callbacks status-only', () => {
+    const contentPayload = { ...payload, subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', targetHost: 'my.example.test' };
+    expect(validatePortalOtpLogPayload(contentPayload)).toMatchObject({ subject: '登录验证码', text: '验证码 123456', loginIp: '203.0.113.10', targetHost: 'my.example.test' });
+		expect(validatePortalOtpLogPayload({ ...contentPayload, status: 'failed' })).toBeNull();
+  });
+
   it('uses one atomic INSERT SELECT and redacts sensitive values', async () => {
     const db = d1Mock();
     const result = await persistPortalOtpLog({ env: { admin: 'admin@example.com', db } }, payload, ormMock());
@@ -60,16 +66,30 @@ describe('portal OTP log contract', () => {
     expect(db.calls[0].args).not.toContain('123456');
   });
 
+  it('writes full accepted login details and runtime owner recipient to private Sent', async () => {
+    const db = d1Mock({ email_id: 99, status: 8 });
+    const message = { ...payload, subject: 'Ziww 登录验证码 · 大陆站', text: 'TEST CODE 000000; IP 203.0.113.7; location Hong Kong/Shanghai; 大陆站', loginIp: '203.0.113.7', loginLocation: 'Hong Kong/Shanghai', targetHost: 'cn.ziww.cc.cd' };
+    await persistPortalOtpLog({ env: { admin: 'admin@example.com', db } }, message, ormMock());
+    const inserted = db.calls.find(c => c.sql.startsWith('INSERT'));
+    expect(inserted.args).toContain(message.text);
+    expect(inserted.args).toContain('admin@example.com');
+    expect(inserted.args.join(' ')).not.toContain('z***');
+    const updated = db.calls.find(c => c.sql.startsWith('UPDATE'));
+    expect(updated.sql).toContain('text = ?');
+    expect(updated.args).toContain(message.text);
+    expect(updated.sql).toContain('WHEN ? = 8 AND status = 1 THEN 1');
+  });
+
   it('does not downgrade delivered or accepted rows when failed is replayed', async () => {
     const deliveredDb = d1Mock({ email_id: 99, status: 2 });
     await persistPortalOtpLog({ env: { admin: 'admin@example.com', db: deliveredDb } }, { ...payload, status: 'failed' }, ormMock());
     const deliveredUpdate = deliveredDb.calls.find(c => c.sql.startsWith('UPDATE'));
-    expect(deliveredUpdate.args[0]).toBe(2);
+    expect(deliveredUpdate.sql).toContain('CASE WHEN status = 2 THEN 2');
 
     const acceptedDb = d1Mock({ email_id: 99, status: 1 });
     await persistPortalOtpLog({ env: { admin: 'admin@example.com', db: acceptedDb } }, { ...payload, status: 'failed' }, ormMock());
     const acceptedUpdate = acceptedDb.calls.find(c => c.sql.startsWith('UPDATE'));
-    expect(acceptedUpdate.args[0]).toBe(1);
+    expect(acceptedUpdate.sql).toContain('WHEN ? = 8 AND status = 1 THEN 1');
   });
 
   it('supports concurrent callers through the atomic D1 statement', async () => {

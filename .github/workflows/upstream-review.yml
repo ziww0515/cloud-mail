@@ -1,0 +1,28 @@
+name: Upstream stable release review
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-stable-review
+  cancel-in-progress: false
+
+jobs:
+  review-upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Discover latest stable and open a draft review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/upstream-review.sh
