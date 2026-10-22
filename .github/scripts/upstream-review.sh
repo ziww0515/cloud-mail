@@ -35,7 +35,7 @@ if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
 else
   git switch -c "$branch" origin/main
   base=$(git merge-base HEAD "$release") || { echo 'No shared ancestry; refusing unrelated-history replacement.' >&2; exit 1; }
-  if ! git -c user.name='upstream-review[bot]' -c user.email='upstream-review@users.noreply.github.com' merge --no-ff --no-edit "$release"; then
+  if ! git -c user.name='upstream-review[bot]' -c user.email='upstream-review@users.noreply.github.com' merge --no-ff -m "chore: review upstream ${tag} [skip ci]" "$release"; then
     # Never commit conflict markers into application files. Keep a reviewable
     # upstream patch and explanation while leaving production source unchanged.
     git merge --abort
